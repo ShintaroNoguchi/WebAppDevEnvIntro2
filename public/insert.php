@@ -23,5 +23,5 @@ try {
     die();
 }
 
-header('Location: http://192.168.99.100'); // トップページへリダイレクト。実行環境ごとに変更する
+header('Location: https://noguchi0408-web-app-sample.herokuapp.com/'); // トップページへリダイレクト。実行環境ごとに変更する
 exit;
