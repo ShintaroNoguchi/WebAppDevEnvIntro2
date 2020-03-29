@@ -9,6 +9,21 @@ try {
     // DBに接続する
     $dbh = new PDO($dsn, $user, $pass);
 
+    // usersテーブルの有無を確認
+    $query = $dbh->prepare('SELECT tablename FROM pg_tables WHERE tablename = ?');
+    $query->execute(array('users'));
+    $tablename = $query->fetchAll();
+
+    // usersテーブルが無い場合、usersテーブルを作成
+    if (is_null($tablenames[0]['tablename'])) {
+        $query = $dbh->prepare('create table users (
+            id integer generated always as identity primary key,
+            name varchar(30) not null,
+            age integer not null
+        );');
+        $query->execute();
+    }
+
     // 登録済みのユーザを取得
     $query = $dbh->prepare('INSERT INTO users (name, age) VALUES (?, ?)');
     $name = $_POST['name'];
