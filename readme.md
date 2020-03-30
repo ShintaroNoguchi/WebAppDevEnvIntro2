@@ -99,13 +99,14 @@ pgAdminはPostgreSQLサーバをウェブブラウザで管理するためのデ
 
 フォームの以下の項目を入力する。
 
-| 入力項目 | 入力内容 | 説明 |
-| General>Name | 任意の名前 | pgAdminで使う値なので自由 |
-| Connection＞Host name/address | 192.168.99.100 | DBが動いているIPアドレスやドメイン |
-| Connection＞Port | `.env`の`POSTGRES_PORT`で設定したポート番号 |  |
-| Connection＞Maintenance database | `.env`の`POSTGRES_DB`で設定したデータベース名 |  |
-| Connection＞Username | `.env`の`POSTGRES_USER`で設定したユーザ名 |  |
-| Connection＞Password | `.env`の`POSTGRES_PASSWORD`で設定したパスワード |  |
+|入力項目|入力内容|説明|
+|:---|:---|:---|
+|General>Name|任意の名前|pgAdminで使う値なので自由|
+|Connection＞Host name/address|192.168.99.100|DBが動いているIPアドレスやドメイン|
+|Connection＞Port|`.env`の`POSTGRES_PORT`で設定したポート番号||
+|Connection＞Maintenance database|`.env`の`POSTGRES_DB`で設定したデータベース名||
+|Connection＞Username|`.env`の`POSTGRES_USER`で設定したユーザ名||
+|Connection＞Password|`.env`の`POSTGRES_PASSWORD`で設定したパスワード||
 
 入力したら「Save」ボタンを押して完了。
 
@@ -163,7 +164,7 @@ try {
     <p>
         <label>年齢：<input type="number" name="age" size="40" min="0" required /></label>
     </p>
-    <input type="submit" value="送信">
+    <input type="submit" value="送信" />
 </form>
 
 <hr>
