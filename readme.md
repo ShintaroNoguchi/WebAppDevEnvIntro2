@@ -197,6 +197,21 @@ try {
     // DBに接続する
     $dbh = new PDO($dsn, $user, $pass);
 
+    // usersテーブルの有無を確認
+    $query = $dbh->prepare('SELECT tablename FROM pg_tables WHERE tablename = ?');
+    $query->execute(array('users'));
+    $tablename = $query->fetchAll();
+
+    // usersテーブルが無い場合、usersテーブルを作成
+    if (is_null($tablenames[0]['tablename'])) {
+        $query = $dbh->prepare('create table users (
+            id integer generated always as identity primary key,
+            name varchar(30) not null,
+            age integer not null
+        );');
+        $query->execute();
+    }
+
     // 登録済みのユーザを取得
     $query = $dbh->prepare('INSERT INTO users (name, age) VALUES (?, ?)');
     $name = $_POST['name'];
@@ -211,6 +226,7 @@ try {
     die();
 }
 
+
 header('Location: http://192.168.99.100'); // トップページへリダイレクト。実行環境ごとに変更する
 exit;
 ```
@@ -220,86 +236,108 @@ exit;
 ブラウザを開いて、Windowsであれば「http://192.168.99.100」に、Macであれば「http://localhost」にアクセスする。
 名前と年齢を入力して送信ボタンを押すと、入力フォームの下に入力した内容が表示される。
 
-## herokuに公開
+## Herokuに公開
+
+Herokuとは開発したWebアプリケーションを簡単に公開するができるホスティングサービス。制限付きではあるが、無料で利用することもできる。
+ホスティングサービスにはSaaS、PaaS、IaaSなどに分類され、HerokuはPaaSの一つ。
+
+- SaaS (Software as a Service)：無料のブログサービスなど
+- PaaS (Platform as a Service)：Heroku
+- IaaS (Infrastructure as a Service)：AWSのEC2など
 
 
-### Git for Windows
+### Herokuに登録
 
-インストール＆設定参考
-https://haniwaman.com/git-for-windows/
+[HerokuのWebサイト](https://jp.heroku.com/)で利用者登録する。
 
-## 作業ディレクトリにLaradockをクローンする
+### HerokuToolbeltをインストール
 
-作業ディレクトリ名をprojectとする。
+HerokuToolbeltをインストールするとコマンドラインからHerokuを操作できるようになる。
+[ここ](https://devcenter.heroku.com/articles/heroku-cli)からインストールする。
 
-```bash:/project
-git init
-git submodule add https://github.com/Laradock/laradock.git
-```
+### 公開するアプリケーションのひな形を作成
 
-## Laradockの初期設定
-
-projectディレクトリ直下にsrcディレクトリを作成
-
-```bash:/project
-mkdir src
-```
-
-laradockディレクトリ内に.envファイルを作成
+コマンドラインからHerokuにログインする。
+下記コマンドを入力すると、ブラウザが開かれログイン画面が出るのでログインする。
+ログインできたらブラウザを閉じて、コマンドラインに戻る。
 
 ```bash:/project
-cd laradock
-```
-```bash:/project/laradock
-cp env-example .env
+$ heroku auth:login
 ```
 
-先程作成した.envファイル(設定ファイル)のAPP_CODE_PATH_HOSTの部分を書き換える。
-これでproject/srcの下の階層がコードを格納するディレクトリとなる。
+続いて、下記のコマンドを入力してアプリのひな型を作る。
+なお、ここで入力するアプリケーション名はユニークである必要があり、他の人が公開しているアプリケーション名と被ってはいけない。
 
-```bash:/project/laradock/.env
-- APP_CODE_PATH_HOST=../
-+ APP_CODE_PATH_HOST=../src
+```bash:/project
+$ heroku create [アプリケーション名] --buildpack heroku/php
+Creating ⬢ [アプリケーション名]... done
+https://git.heroku.com/[アプリケーション名].git
 ```
 
-## Dockerでworkspaceを立ち上げる
+### Herokuアプリをリモートリポジトリとして登録
 
-laradockディレクトリ直下で以下のコマンドを実行
+gitを利用して、ソースコードをHerokuに反映する。
+下記のコマンドで、Herokuアプリをリモートリポジトリとして登録する。
+このコマンドは`project`ディレクトリ（`git init`を実行したディレクトリ）直下で実行する。
 
-```bash:/project/laradock
-$ docker-compose up -d workspace nginx
+```bash:/project
+$ git remote add heroku https://git.heroku.com/[アプリケーション名].git
 ```
 
-コンテナの起動状況を確認する。下記のようなコンテナ稼働状態になっていればOK。
+### HerokuアプリにPostgreSQLを紐づける
 
-```bash:/project/laradock
-$ docker-compose ps
-Name                          Command              State                     Ports
----------------------------------------------------------------------------------------------------------------
-laradock_docker-in-docker_1   dockerd-entrypoint.sh           Up       2375/tcp
-laradock_nginx_1              nginx                           Up       0.0.0.0:443->443/tcp, 0.0.0.0:80->80/tcp
-laradock_php-fpm_1            docker-php-entrypoint php-fpm   Up       9000/tcp
-laradock_workspace_1          /sbin/my_init                   Up       0.0.0.0:2222->22/tcp
+HerokuでPostgreSQLを使う場合にはHeroku Postgresというアドオンを使う。
+以下のコマンドで「Heroku Postgres」を追加する。
+
+```bash:/project
+$ heroku addons:add heroku-postgresql
 ```
 
-## 公開領域のディレクトリを作成
+作成されたDB情報を確認するには以下のコマンドで確認できる。
+DATABASE_URLの値がDBの情報であり、これを用いてDBにアクセスする。
 
-srcディレクトリ直下に公開領域のディレクトリを作成。
-公開領域のパスはデフォルトでは/var/www/publicとなっている。
-変更する場合はproject/laradock/nginx/sites/defalt.confのrootを変更する。
-
-```bash:/project/src
-mkdir public
+```bash:/project
+$ heroku config
+DATABASE_URL: postgres://[ユーザ名]:[パスワード]@[ホスト名]:[ポート]/[データベース名]
 ```
 
-## 公開領域に公開したいファイルを作成
+### phpファイルのDB情報を修正する
 
-公開したいファイルを公開領域に作成する。
+index.phpとinsert.phpのDB接続情報をherokuのDB情報に書き換える。
 
-公開したいファイルにindex.php、index.html、index.htmのいずれかが含まれていると、それらはリクエストのURIが"/"で終わっている（つまりディレクトリになっている）ときにインデックスとして使われるファイルとなる。
-インデックスとして使われるファイルの名前を変更したい場合はproject/laradock/nginx/sites/defalt.confのindexを変更する。
+```bash:/project/src/public/index.php
+- $dsn = 'pgsql:dbname=default;host=192.168.99.100;port=54320';
++ $dsn = 'pgsql:dbname=[データベース名];host=[ホスト名];port=[ポート番号]';
+- $user = 'default';
++ $user = '[ユーザ名]';
+- $pass = 'secret';
++ $pass = '[パスワード]';
+```
 
-## 動作確認
+ついでにinsert.phpのリダイレクト先も変更しておく。
 
-ブラウザを開いて、Windowsであれば「http://192.168.99.100」に、Macであれば「http://localhost」にアクセスする。
-公開したファイルが正しく表示できてれば成功。
+```bash:/project/src/public/insert.php
+- header('Location: http://192.168.99.100');
++ header('Location: https://[Herokuのアプリケーション名].herokuapp.com/');
+```
+
+### Herokuアプリにサービスを反映
+
+Heroku側の準備が整ったので、以下のgitコマンドでHerokuのリモートリポジトリにコードをpushする。
+このコマンドは`project`ディレクトリ（`git init`を実行したディレクトリ）直下で実行する。
+
+```bash:/project
+$ git add .
+$ git commit -m 'コミットメッセージ'
+$ git subtree push --prefix src/public heroku master
+```
+
+3行目はpublicディレクトリの中だけをpushしている。
+
+### デプロイしたサービスを開く
+
+```bash:/project
+$ heroku open
+```
+
+アプリが正しく動いていれば成功。
